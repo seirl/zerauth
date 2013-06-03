@@ -18,7 +18,7 @@ def portal_query(section, action, authkey=''):
         CFG['server']['port'])
 
     print('Sending query with action={}, section={}, authkey={} to {}'.format(
-        action, section, authkey, url))
+        action, section, repr(authkey), url))
 
     data = {
         'U': CFG['login']['username'],
@@ -37,7 +37,6 @@ def portal_query(section, action, authkey=''):
 
 def get_authkey(response):
     tree = lxml.html.parse(io.BytesIO(response.content))
-    print(lxml.html.tostring(tree).decode('utf-8'))
     candidates = tree.xpath("//input[@type='hidden'][@name='Authenticator']")
     authkey = candidates[0].value
 
@@ -48,18 +47,22 @@ def get_authkey(response):
 
 class Zerauth:
     authkey = ''
+    enabled = True
 
     def connect(self):
         self.authkey = get_authkey(portal_query('CPAuth', 'Authenticate'))
         portal_query('CPGW', 'Connect', self.authkey)
         portal_query('ClientCTRL', 'Connect', self.authkey)
+        self.enabled = True
 
     def run(self):
-        while True:
-            time.sleep(CFG['server']['renew_delay'])
+        time.sleep(CFG['server']['renew_delay'])
+        while self.enabled:
             portal_query('CPGW', 'Renew', self.authkey)
+            time.sleep(CFG['server']['renew_delay'])
 
     def logout(self):
+        self.enabled = False
         portal_query('CPGW', 'Disconnect', self.authkey)
 
 
