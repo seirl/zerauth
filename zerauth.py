@@ -7,6 +7,7 @@ import argparse
 import lxml.html
 import io
 import time
+import signal
 
 CFG = {}
 
@@ -45,18 +46,21 @@ def get_authkey(response):
     return authkey
 
 
-def run():
-    authkey = get_authkey(portal_query('CPAuth', 'Authenticate'))
-    authkey = get_authkey(portal_query('CPGW', 'Connect', authkey))
-    authkey = get_authkey(portal_query('ClientCTRL', 'Connect', authkey))
+class Zerauth:
+    authkey = ''
 
-    while True:
-        time.sleep(CFG['server']['renew_delay'])
-        authkey = get_authkey(portal_query('CPGW', 'Renew', authkey))
+    def connect(self):
+        self.authkey = get_authkey(portal_query('CPAuth', 'Authenticate'))
+        portal_query('CPGW', 'Connect', self.authkey)
+        portal_query('ClientCTRL', 'Connect', self.authkey)
 
+    def run(self):
+        while True:
+            time.sleep(CFG['server']['renew_delay'])
+            portal_query('CPGW', 'Renew', self.authkey)
 
-def logout(authkey):
-    portal_query('CPGW', 'Disconnect', authkey)
+    def logout(self):
+        portal_query('CPGW', 'Disconnect', self.authkey)
 
 
 if __name__ == '__main__':
@@ -67,4 +71,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     CFG = yaml.load(open(args.config))
 
-    run()
+    z = Zerauth()
+    z.connect()
+
+    def sigint_handler():
+        z.logout()
+    signal.signal(signal.SIGINT, z.logout)
+
+    z.run()
