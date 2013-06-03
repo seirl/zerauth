@@ -74,8 +74,8 @@ if __name__ == '__main__':
     z = Zerauth()
     z.connect()
 
-    def sigint_handler():
+    def sigint_handler(signal, frame):
         z.logout()
-    signal.signal(signal.SIGINT, z.logout)
+    signal.signal(signal.SIGINT, sigint_handler)
 
     z.run()
