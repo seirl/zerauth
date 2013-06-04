@@ -8,6 +8,7 @@ import lxml.html
 import io
 import time
 import signal
+import sys
 
 CFG = {}
 
@@ -63,7 +64,7 @@ class Zerauth:
 
     def logout(self):
         self.enabled = False
-        portal_query('CPGW', 'Disconnect', self.authkey)
+        portal_query('CPGW', 'Disconnect', self.authkey, timeout=10)
 
 
 if __name__ == '__main__':
@@ -79,6 +80,7 @@ if __name__ == '__main__':
 
     def sigint_handler(signal, frame):
         z.logout()
+        sys.exit(0)
     signal.signal(signal.SIGINT, sigint_handler)
 
     z.run()
