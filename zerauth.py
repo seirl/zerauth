@@ -64,7 +64,7 @@ class Zerauth:
 
     def logout(self):
         self.enabled = False
-        portal_query('CPGW', 'Disconnect', self.authkey, timeout=10)
+        portal_query('CPGW', 'Disconnect', self.authkey)
 
 
 if __name__ == '__main__':
