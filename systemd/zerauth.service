@@ -1,0 +1,10 @@
+[Unit]
+Description=ZeroShell captive-portal login daemon.
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zerauth
+
+[Install]
+WantedBy=multi-user.target
