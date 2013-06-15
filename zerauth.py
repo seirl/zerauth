@@ -10,6 +10,7 @@ import io
 import time
 import signal
 import sys
+import logging
 
 CFG = {}
 
@@ -19,7 +20,7 @@ def portal_query(section, action, authkey='', timeout=30):
         CFG['server']['protocol'], CFG['server']['host'],
         CFG['server']['port'])
 
-    print('Query: action={}, section={}, authkey={} to {}'.format(
+    logging.info('Query: action={}, section={}, authkey={} to {}'.format(
         action, section, repr(authkey[:10] + '…' if authkey else None), url))
 
     data = {
@@ -52,7 +53,7 @@ class Zerauth:
         try:
             r = portal_query('CPAuth', 'Authenticate')
             if 'Access Denied' in r.text:
-                print('Login failed, please check your login/password.')
+                logging.error('Login failed, please check your login/password')
                 sys.exit(1)
             self.authkey = get_authkey(r)
             if not self.authkey:
@@ -61,7 +62,7 @@ class Zerauth:
             portal_query('ClientCTRL', 'Connect', self.authkey)
             self.enabled = True
         except (LookupError, RequestException) as e:
-            print('Connection failed ("{}"), retrying in 30s.'.format(e))
+            logging.error('Connection failed: "{}", retrying in 30s'.format(e))
             time.sleep(30)
             self.connect()
 
@@ -72,7 +73,7 @@ class Zerauth:
                 portal_query('CPGW', 'Renew', self.authkey)
                 time.sleep(CFG['server']['renew_delay'])
         except RequestException as e:
-            print('Renew failed ("{}"), trying to reconnect.'.format(e))
+            logging.error('Renew failed: "{}", trying to reconnect.'.format(e))
             self.connect()
             self.run()
 
@@ -84,9 +85,13 @@ class Zerauth:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Zeroshell Captive portal auth daemon')
-    parser.add_argument('--config', dest='config', default='zerauth.yml',
-        help='configuration file, informations about the captive portal')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+            help='display verbose logs')
+    parser.add_argument('-c', '--config', dest='config', default='zerauth.yml',
+            help='captive portal configuration')
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO if args.verbose else logging.ERROR)
     CFG = yaml.load(open(args.config))
 
     z = Zerauth()
