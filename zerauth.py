@@ -3,6 +3,7 @@
 
 import yaml
 import requests
+from requests.exceptions import RequestException
 import argparse
 import lxml.html
 import io
@@ -13,13 +14,13 @@ import sys
 CFG = {}
 
 
-def portal_query(section, action, authkey=''):
+def portal_query(section, action, authkey='', timeout=30):
     url = '{}://{}:{}/cgi-bin/zscp'.format(
         CFG['server']['protocol'], CFG['server']['host'],
         CFG['server']['port'])
 
-    print('Sending query with action={}, section={}, authkey={} to {}'.format(
-        action, section, repr(authkey), url))
+    print('Query: action={}, section={}, authkey={} to {}'.format(
+        action, section, repr(authkey[:10] + '…' if authkey else None), url))
 
     data = {
         'U': CFG['login']['username'],
@@ -40,9 +41,6 @@ def get_authkey(response):
     tree = lxml.html.parse(io.BytesIO(response.content))
     candidates = tree.xpath("//input[@type='hidden'][@name='Authenticator']")
     authkey = candidates[0].value
-
-    if authkey:
-        print('Authentification key found:', repr(authkey))
     return authkey
 
 
@@ -51,16 +49,32 @@ class Zerauth:
     enabled = True
 
     def connect(self):
-        self.authkey = get_authkey(portal_query('CPAuth', 'Authenticate'))
-        portal_query('CPGW', 'Connect', self.authkey)
-        portal_query('ClientCTRL', 'Connect', self.authkey)
-        self.enabled = True
+        try:
+            r = portal_query('CPAuth', 'Authenticate')
+            if 'Access Denied' in r.text:
+                print('Login failed, please check your login/password.')
+                sys.exit(1)
+            self.authkey = get_authkey(r)
+            if not self.authkey:
+                raise LookupError('AuthKey not found.')
+            portal_query('CPGW', 'Connect', self.authkey)
+            portal_query('ClientCTRL', 'Connect', self.authkey)
+            self.enabled = True
+        except (LookupError, RequestException) as e:
+            print('Connection failed ("{}"), retrying in 30s.'.format(e))
+            time.sleep(30)
+            self.connect()
 
     def run(self):
-        time.sleep(CFG['server']['renew_delay'])
-        while self.enabled:
-            portal_query('CPGW', 'Renew', self.authkey)
+        try:
             time.sleep(CFG['server']['renew_delay'])
+            while self.enabled:
+                portal_query('CPGW', 'Renew', self.authkey)
+                time.sleep(CFG['server']['renew_delay'])
+        except RequestException as e:
+            print('Renew failed ("{}"), trying to reconnect.'.format(e))
+            self.connect()
+            self.run()
 
     def logout(self):
         self.enabled = False
