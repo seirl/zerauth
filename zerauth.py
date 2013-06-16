@@ -97,9 +97,16 @@ if __name__ == '__main__':
     z = Zerauth()
     z.connect()
 
-    def sigint_handler(signal, frame):
+    def stop_handler(signal, frame):
         z.logout()
         sys.exit(0)
-    signal.signal(signal.SIGINT, sigint_handler)
+
+    def reload_handler(signal, frame):
+        CFG.update(yaml.load(open(args.config)))
+
+    signal.signal(signal.SIGINT, stop_handler)
+    signal.signal(signal.SIGTERM, stop_handler)
+    if not (sys.stdin.isatty() or sys.stdout.isatty()):
+        signal.signal(signal.SIGHUP, reload_handler)
 
     z.run()
