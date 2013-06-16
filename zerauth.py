@@ -35,7 +35,7 @@ def portal_query(section, action, authkey='', timeout=30):
     if authkey:
         data['Authenticator'] = authkey
 
-    return requests.post(url, data=data)
+    return requests.post(url, data=data, timeout=timeout)
 
 
 def get_authkey(response):
