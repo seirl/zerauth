@@ -91,7 +91,8 @@ if __name__ == '__main__':
             help='captive portal configuration')
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO if args.verbose else logging.ERROR)
+    logging.basicConfig(level=logging.INFO if args.verbose else logging.ERROR,
+            format='%(levelname)s:%(asctime)s: %(message)s')
     CFG = yaml.load(open(args.config))
 
     z = Zerauth()
