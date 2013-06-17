@@ -106,7 +106,6 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, stop_handler)
     signal.signal(signal.SIGTERM, stop_handler)
-    if not (sys.stdin.isatty() or sys.stdout.isatty()):
-        signal.signal(signal.SIGHUP, reload_handler)
+    signal.signal(signal.SIGUSR1, reload_handler)
 
     z.run()
