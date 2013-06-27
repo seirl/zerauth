@@ -105,9 +105,14 @@ if __name__ == '__main__':
     def reload_handler(signal, frame):
         CFG.update(yaml.load(open(args.config)))
 
-    if all(hasattr(signal, s) for s in ('SIGINT', 'SIGTERM', 'SIGUSR1')):
-        signal.signal(signal.SIGINT, stop_handler)
-        signal.signal(signal.SIGTERM, stop_handler)
+    signal.signal(signal.SIGINT, stop_handler)
+    signal.signal(signal.SIGQUIT, stop_handler)
+    signal.signal(signal.SIGTERM, stop_handler)
+
+    if hasattr(signal, 'SIGUSR1'):
         signal.signal(signal.SIGUSR1, reload_handler)
 
-    z.run()
+    try:
+        z.run()
+    except KeyboardInterrupt:
+        stop_handler()
