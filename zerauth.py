@@ -106,7 +106,6 @@ if __name__ == '__main__':
         CFG.update(yaml.load(open(args.config)))
 
     signal.signal(signal.SIGINT, stop_handler)
-    signal.signal(signal.SIGQUIT, stop_handler)
     signal.signal(signal.SIGTERM, stop_handler)
 
     if hasattr(signal, 'SIGUSR1'):
