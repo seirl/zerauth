@@ -35,7 +35,7 @@ def portal_query(section, action, authkey='', timeout=30):
     if authkey:
         data['Authenticator'] = authkey
 
-    return requests.post(url, data=data, timeout=timeout)
+    return requests.post(url, data=data, timeout=timeout, verify=False)
 
 
 def get_authkey(response):
@@ -105,8 +105,9 @@ if __name__ == '__main__':
     def reload_handler(signal, frame):
         CFG.update(yaml.load(open(args.config)))
 
-    signal.signal(signal.SIGINT, stop_handler)
-    signal.signal(signal.SIGTERM, stop_handler)
-    signal.signal(signal.SIGUSR1, reload_handler)
+    if all(hasattr(signal, s) for s in ('SIGINT', 'SIGTERM', 'SIGUSR1')):
+        signal.signal(signal.SIGINT, stop_handler)
+        signal.signal(signal.SIGTERM, stop_handler)
+        signal.signal(signal.SIGUSR1, reload_handler)
 
     z.run()
