@@ -62,6 +62,10 @@ class Zerauth:
             portal_query('ClientCTRL', 'Connect', self.authkey)
             self.enabled = True
         except (LookupError, RequestException) as e:
+            if 'http.client.BadStatusLine' in str(e):
+                logging.error('The port does not match with the protocol. '
+                              'Please check your configuration.')
+                sys.exit(1)
             logging.error('Connection failed: "{}", retrying in 30s'.format(e))
             time.sleep(30)
             self.connect()
