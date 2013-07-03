@@ -102,7 +102,7 @@ if __name__ == '__main__':
     z = Zerauth()
     z.connect()
 
-    def stop_handler(signal, frame):
+    def stop_handler(signal=None, frame=None):
         z.logout()
         sys.exit(0)
 
