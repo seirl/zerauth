@@ -14,14 +14,25 @@ import logging
 
 CFG = {}
 
+RED = '\033[91m'
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+BLUE = '\033[94m'
+MAGENTA = '\033[95m'
+CYAN = '\033[96m'
+CSTOP = '\033[0m'
 
 def portal_query(section, action, authkey='', timeout=30):
     url = '{}://{}:{}/cgi-bin/zscp'.format(
         CFG['server']['protocol'], CFG['server']['host'],
         CFG['server']['port'])
 
-    logging.info('Query: action={}, section={}, authkey={} to {}'.format(
-        action, section, repr(authkey[:10] + '…' if authkey else None), url))
+    logging.info('[{cyan}{section:^10}{cs}][{green}{action:^12}{cs}]'
+                 ' Query {url} with key {yellow}{key}{cs}'.format(
+        action=action, section=section, url=url,
+        key=repr(authkey[:10] + '…' if authkey else None),
+        cyan=CYAN, green=GREEN, yellow=YELLOW, cs=CSTOP
+    ))
 
     data = {
         'U': CFG['login']['username'],
@@ -93,14 +104,17 @@ class Zerauth:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Zeroshell Captive portal auth daemon')
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
-            help='display verbose logs')
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+            help='hide verbose logs')
     parser.add_argument('-c', '--config', dest='config', default='zerauth.yml',
             help='captive portal configuration')
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO if args.verbose else logging.ERROR,
+    logging.basicConfig(level=logging.ERROR if args.quiet else logging.INFO,
             format='%(levelname)s:%(asctime)s: %(message)s')
+
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
     CFG = yaml.load(open(args.config))
 
     z = Zerauth()
