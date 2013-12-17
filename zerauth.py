@@ -75,8 +75,12 @@ class Zerauth:
             time.sleep(CFG['server']['renew_delay'])
             while self.enabled:
                 portal_query('CPGW', 'Renew', self.authkey)
+                last = time.time()
                 time.sleep(CFG['server']['renew_delay'])
-        except RequestException as e:
+                # In case of suspend
+                if time.time() - last > CFG['server']['renew_delay'] * 1.5:
+                    raise RuntimeError("System has been suspended")
+        except (RequestException, RuntimeError) as e:
             logging.error('Renew failed: "{}", trying to reconnect.'.format(e))
             self.connect()
             self.run()
@@ -103,10 +107,14 @@ if __name__ == '__main__':
     z.connect()
 
     def stop_handler(signal=None, frame=None):
+        if signal:
+            logging.info('Signal received: {}. Logging out.'.format(signal))
         z.logout()
         sys.exit(0)
 
     def reload_handler(signal, frame):
+        if signal:
+            logging.info('Signal received: {}. Reloading.'.format(signal))
         CFG.update(yaml.load(open(args.config)))
 
     if hasattr(signal, 'SIGTERM'):
@@ -118,4 +126,4 @@ if __name__ == '__main__':
     try:
         z.run()
     except KeyboardInterrupt:
-        stop_handler()
+        stop_handler('SIGINT')
