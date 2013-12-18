@@ -114,6 +114,7 @@ if __name__ == '__main__':
             format='%(levelname)s:%(asctime)s: %(message)s')
 
     logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.WARNING)
 
     CFG = yaml.load(open(args.config))
 
