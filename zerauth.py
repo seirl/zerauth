@@ -91,19 +91,20 @@ class Zerauth:
             self.connect()
 
     def run(self):
-        try:
-            time.sleep(CFG['server']['renew_delay'])
-            while self.enabled:
-                portal_query('CPGW', 'Renew', self.authkey)
-                last = time.time()
+        while True:
+            try:
                 time.sleep(CFG['server']['renew_delay'])
-                # In case of suspend
-                if time.time() - last > CFG['server']['renew_delay'] * 1.5:
-                    raise RuntimeError("System has been suspended")
-        except (RequestException, RuntimeError) as e:
-            logging.error('Renew failed: "{}", trying to reconnect.'.format(e))
-            self.connect()
-            self.run()
+                while self.enabled:
+                    portal_query('CPGW', 'Renew', self.authkey)
+                    last = time.time()
+                    time.sleep(CFG['server']['renew_delay'])
+                    # In case of suspend
+                    if time.time() - last > CFG['server']['renew_delay'] * 1.5:
+                        raise RuntimeError("System has been suspended")
+            except (RequestException, RuntimeError) as e:
+                logging.error(
+                        'Renew failed: "{}", trying to reconnect.'.format(e))
+                self.connect()
 
     def logout(self):
         self.enabled = False
