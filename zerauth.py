@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 import argparse
+import functools
 import io
 import logging
 import lxml.html
@@ -57,11 +58,15 @@ def get_authkey(response):
     return authkey
 
 
-def systemd_notify():
-    try:
-        subprocess.call(["systemd-notify", "--ready"])
-    except FileNotFoundError:
-        pass
+try:
+    import systemd.daemon
+    systemd_notify = functools.partial(systemd.daemon.notify, "READY=1")
+except ImportError:
+    def systemd_notify():
+        try:
+            subprocess.call(["systemd-notify", "--ready"])
+        except FileNotFoundError:
+            pass
 
 
 class Zerauth:
