@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import yaml
-import requests
-from requests.exceptions import RequestException
 import argparse
-import lxml.html
 import io
-import time
+import logging
+import lxml.html
+import requests
+import subprocess
 import signal
 import sys
-import logging
+import time
+import yaml
+from requests.exceptions import RequestException
 
 CFG = {}
 
@@ -56,6 +57,13 @@ def get_authkey(response):
     return authkey
 
 
+def systemd_notify():
+    try:
+        subprocess.call(["systemd-notify", "--ready"])
+    except FileNotFoundError:
+        pass
+
+
 class Zerauth:
     authkey = ''
     enabled = True
@@ -72,6 +80,7 @@ class Zerauth:
             portal_query('CPGW', 'Connect', self.authkey)
             portal_query('ClientCTRL', 'Connect', self.authkey)
             self.enabled = True
+            systemd_notify()
         except (LookupError, RequestException) as e:
             if 'http.client.BadStatusLine' in str(e):
                 logging.error('The port does not match with the protocol. '

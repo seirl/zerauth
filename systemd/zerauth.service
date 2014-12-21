@@ -3,7 +3,7 @@ Description=ZeroShell captive-portal login daemon.
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 ExecStart=/usr/bin/zerauth -c /etc/zerauth.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 
