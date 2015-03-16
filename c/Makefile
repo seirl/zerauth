@@ -1,6 +1,6 @@
-CC=gcc
-CFLAGS=-Wall -Wextra -std=c99
-NAME=zerauth
+# CC = mips-openwrt-linux-gcc
+CFLAGS =-Wall -Wextra -std=c99
+NAME = zerauth
 
 .PHONY: clean
 
@@ -30,7 +30,7 @@ ifdef TIMEOUT
 	CFLAGS+=-DTIMEOUT=$(TIMEOUT)
 endif
 
-$(NAME):
+$(NAME): zerauth.c config.mk
 	$(CC) $(CFLAGS) -o $(NAME) $(NAME).c
 
 clean:
