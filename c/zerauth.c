@@ -80,9 +80,14 @@ static char *http(const char *host, int port,
     char *to_send;
     asprintf(&to_send,
         "%s %s HTTP/1.0\r\n"
-        "Host: %s\r\n"
-        "Connection: close\r\n"
-        "%s\r\n%s", verb, path, host, content, data);
+        "Host: 192.168.0.1:12080\r\n"
+        "Connection: keep-alive\r\n"
+        "User-Agent: Mozilla/5.0 (Android; Mobile; rv:33.0) Gecko/33.0 Firefox/33.0\r\n"
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+        "Accept-Language: fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3\r\n"
+        "Accept-Encoding: gzip, deflate\r\n"
+        "Referer: http://192.168.0.1:12080/cgi-bin/zscp?Section=CPAuth&Action=Show&ZSCPRedirect=time.is:::http://time.is/%%3f\r\n"
+        "%s\r\n%s", verb, path, content, data);
 
     free(content);
 
@@ -129,10 +134,16 @@ static char *portal_query(const char* section, const char* action,
                           const char* authkey)
 {
     char *c;
-    asprintf(&c,
-            "U=%s&P=%s&Realm=%s&Action=%s&Section=%s&Authenticator=%s",
-            USERNAME, PASSWORD, DOMAIN, action, section,
-            authkey ? authkey : "");
+    if (authkey)
+        asprintf(&c,
+                "U=%s&P=%s&Realm=arpej.com&Action=%s&Section=%s&Authenticator=%s&ZSCPRedirect=_:::_",
+                USERNAME, PASSWORD, action, section,
+                authkey);
+    else
+        asprintf(&c,
+                "U=%s&P=%s&Realm=arpej.com&Action=%s&Section=%s&ZSCPRedirect=_:::_",
+                USERNAME, PASSWORD, action, section);
+
     char *ret = http(DOMAIN, PORT, "POST", "/cgi-bin/zscp", c, TIMEOUT);
     free(c);
     return ret;
@@ -140,16 +151,47 @@ static char *portal_query(const char* section, const char* action,
 
 static char *get_authkey(const char* content)
 {
-    char *ret = malloc(64 * sizeof (char));
-    const char *pos = strchr(strstr(content, "Authenticator"), '>') + 1;
+    char *ret = malloc(128 * sizeof (char));
+    const char *pos = strchr(strstr(content, "Authenticator"), '"') + 1;
     if (!pos)
     {
         free(ret);
         return NULL;
     }
-    pos = strchr(pos, '>') + 1;
-    for (int i = 0; pos[i] && pos[i] != '<'; i++)
-        ret[i] = pos[i];
+
+    int j = 0;
+    int i = 0;
+    // 125 is buffer size minus 1 for '\0' and 2 for extra char that come in %xx
+    for (; j < 125 && pos[i] && pos[i] != '"'; ++i, ++j)
+    {
+        if (pos[i] == '/')
+        {
+            ret[j++] = '%';
+            ret[j++] = '2';
+            ret[j] = 'F';
+        }
+        else if (pos[i] == '+')
+        {
+            ret[j++] = '%';
+            ret[j++] = '2';
+            ret[j] = 'B';
+        }
+        else if (pos[i] == '\n')
+        {
+            ret[j++] = '%';
+            ret[j++] = '0';
+            ret[j] = 'A';
+        }
+        else if (pos[i] == '=')
+        {
+            ret[j++] = '%';
+            ret[j++] = '3';
+            ret[j] = 'D';
+        }
+        else
+            ret[j] = pos[i];
+    }
+    ret[j] = '\0';
     return ret;
 }
 
@@ -182,16 +224,16 @@ int main(void)
         if (!content)
             goto socketerror;
 
-        if (strstr("Access Denied", content))
+        if (strstr(content, "Access Denied"))
         {
-            fprintf(stderr, "Login failed, please check your login/password");
+            fputs("Login failed, please check your login/password.", stderr);
             goto fail;
         }
 
         authkey = get_authkey(content);
         if (!authkey)
         {
-            fprintf(stderr, "Authkey not found.");
+            fputs("Authkey not found.", stderr);
             goto fail;
         }
         g_authkey = authkey;
@@ -209,13 +251,13 @@ int main(void)
                 break;
             if (time(0) - t > (RENEW_DELAY * 3) / 2)
             {
-                fprintf(stderr, "System has been suspended.");
+                fputs("System has been suspended.", stderr);
                 goto fail;
             }
         }
 
 socketerror:
-        fprintf(stderr, "Connection failed, retrying in 30s.");
+        fputs("Connection failed, retrying in 30s.", stderr);
 fail:
         free(content);
         free(authkey);
